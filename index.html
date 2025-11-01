@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mic Loudness Mouth Icon</title>
+  <style>
+    body {
+      text-align: center;
+      margin-top: 50px;
+      font-family: sans‑serif;
+    }
+    #mouth {
+      width: 200px;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Mic Loudness Visualizer</h1>
+  <img id="mouth" src="mouth_closed.png" alt="Mouth icon">
+  <p id="status">Waiting for mic…</p>
+
+  <script>
+    // images
+    const imgClosed = 'mouth_closed.png'; // no volume or very low
+    const imgSoft   = 'mouth_soft.png';   // moderate volume
+    const imgLoud   = 'mouth_open.png';   // high volume
+
+    const statusEl = document.getElementById('status');
+    const mouthEl  = document.getElementById('mouth');
+
+    async function initMic() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        const audioCtx = new AudioContext();
+        const source   = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        function checkVolume() {
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          const average = sum / dataArray.length;
+
+          // thresholds: adjust as you like
+          if (average < 10) {
+            mouthEl.src = imgClosed;
+            statusEl.textContent = 'Silent / very low';
+          }
+          else if (average < 40) {
+            mouthEl.src = imgSoft;
+            statusEl.textContent = 'Soft volume';
+          }
+          else {
+            mouthEl.src = imgLoud;
+            statusEl.textContent = 'Loud volume';
+          }
+
+          requestAnimationFrame(checkVolume);
+        }
+
+        statusEl.textContent = 'Mic active — speak now';
+        checkVolume();
+      }
+      catch (err) {
+        console.error('Mic error:', err);
+        statusEl.textContent = 'Error accessing mic: ' + err.message;
+      }
+    }
+
+    initMic();
+  </script>
+
+</body>
+</html>
